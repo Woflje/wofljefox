@@ -1,0 +1,11 @@
+[Unit]
+Description=wofljestart
+
+[Service]
+Type=forking
+ExecStart=/bin/bash /home/woflje/startup.sh
+WorkingDirectory=/home/woflje
+User=woflje
+
+[Install]
+WantedBy=multi-user.target
