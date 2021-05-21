@@ -6,10 +6,16 @@ from escpos import *
 from PIL import Image
 from time import sleep
 from emoji import demojize
+import requests
+import random
 import pytz
 
 from text import *
 
+
+def raph_exists(raph_db, raph_n, ext):
+    raph_img_path = raph_db + "/img/raph/" + raph_n + ext
+    return requests.head(raph_img_path).status_code == requests.codes.ok
 
 class printer:
     def __init__(self, config, queue, db):
@@ -29,8 +35,10 @@ class printer:
                 if item['text'] or item['urls'] or item['image']:
                     if item['level'] < 2:
                         self.p.text(f"Name: {item['name']}\nID:   {item['id']}\nDate: {item['date'].split('+')[0]}\n\n")
-                    context.bot.send_message(chat_id=item['id'], text=printing_text)
-
+                    if item['raph'] == True:
+                        context.bot.send_message(chat_id=item['id'], text=raph_text)
+                    else:
+                        context.bot.send_message(chat_id=item['id'], text=printing_text)
                     # Print text if text exists
                     if item['text']:
                         self.p.text(f"{item['text']}\n\n")
@@ -44,6 +52,7 @@ class printer:
                     # Print image if image exists
                     if item['image']:
                         self.p.image(item['image'])
+                        
 
                     # Cut if auto_cut is enabled
                     if self.cf['auto_cut']:
@@ -90,8 +99,7 @@ class handler:
             level = -1
         return level
 
-
-    def message(self, update, context):
+    def message(self, update, context, raph=False):
         message = update.message
         date = message.date
         level = self.get_level(message.chat.id)
@@ -106,7 +114,24 @@ class handler:
             urls = []
             self.users.update(tdbop.increment("messages"), Query().id == message.chat.id)
 
-            if text is not None:
+            if raph:
+                text = None
+                raph_db = "https://thelegendofwolf.com"
+                raph_db_path = raph_db + "/img/raph/"
+                raph_n = str(random.randrange(0,143))
+                if raph_exists(raph_db, raph_n, ".jpg") == True:
+                    imageFile = raph_db_path + raph_n + ".jpg"
+                elif raph_exists(raph_db, raph_n, ".jpeg") == True:
+                    imageFile = raph_db_path + raph_n + ".jpeg"
+                elif raph_exists(raph_db, raph_n, ".png") == True:
+                    imageFile = raph_db_path + raph_n + ".png"
+                elif raph_exists(raph_db, "0", ".jpg") == True:
+                    imageFile = raph_db_path + "0.jpg"
+                    raph_n = "0"
+                else:
+                    raph = False
+                    message.reply_text("Failed to load the Raphtalia database! Cannot send Raphtalia... please wait for season 2.")
+            elif text is not None:
                 text = demojize(text)
                 newchars = self.users.search(Query().id == message.chat.id)[0]['characters'] + len(text)
                 self.users.update(tdbop.set("characters", newchars), Query().id == message.chat.id)
@@ -134,7 +159,11 @@ class handler:
             # Only process and add image if an image exists
             if imageFile is not None:
                 self.users.update(tdbop.increment("images"), Query().id == message.chat.id)
-                image = imageFile.download(custom_path=f"./imgcache/{imageFile.file_id}.{imageFile.file_path.split('.')[-1]}")
+                if raph == True:
+                    image = "./imgcache/raph_" + imageFile.split('/')[-1]
+                    open(image, 'wb').write(requests.get(imageFile, allow_redirects=True).content)
+                else:
+                    image = imageFile.download(custom_path=f"./imgcache/{imageFile.file_id}.{imageFile.file_path.split('.')[-1]}")
                 img = Image.open(image)
                 img = img.convert('RGBA')
                 tempimg = Image.new('RGBA', img.size, "WHITE")
@@ -143,9 +172,15 @@ class handler:
                 if img.size[0] > img.size[1] and img.size[0] < 3 * img.size[1] or img.size[1] > 3 * img.size[0]:
                     img = img.rotate(angle=90, expand=True)
                 img = img.resize((self.cf['max_width'], int(img.size[1] * self.cf['max_width']/img.size[0])))
-                img.save(f"./imgcache/{imageFile.file_unique_id}.jpeg", 'JPEG')
-                image = f"./imgcache/{imageFile.file_unique_id}.jpeg"
+                if raph == True:
+                    new_raph = "." + image.split('.')[-2] + ".jpeg"
+                    img.save(new_raph, 'JPEG')
+                    image = new_raph
+                else:
+                    img.save(f"./imgcache/{imageFile.file_unique_id}.jpeg", 'JPEG')
+                    image = f"./imgcache/{imageFile.file_unique_id}.jpeg"
 
+                
     # QUEUE updating
             # Add gathered data to queue, if no text/urls/image, Null will be inserted into the respective entry
             if message.chat.last_name != None:
@@ -158,6 +193,7 @@ class handler:
                                "date": str(date.replace(tzinfo=pytz.UTC).astimezone(pytz.timezone("Europe/Amsterdam"))),
                                "text": text,
                                "image": image,
+                               "raph": raph,
                                "urls": urls,
                                "printed": False})
             if self.sleep:

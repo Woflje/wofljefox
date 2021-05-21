@@ -24,3 +24,7 @@ printing_text = (
 no_print_access = (
     '''Sorry, but you don't seem to have print access... You can use /start to request it!'''
 )
+
+raph_text = (
+	'''Sending Raphtalia...'''
+)

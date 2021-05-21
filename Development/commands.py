@@ -53,7 +53,6 @@ class info(cmdhandler):
     def callback(self, update, context):
         update.message.reply_text(str(update))
 
-
 class stats(cmdhandler):
     def callback(self, update, context):
         self.handler.stats(update, context)
@@ -98,3 +97,7 @@ class sleep(cmdhandler):
 class wake(cmdhandler):
     def callback(self, update, context):
         self.handler.wake(update, context)
+
+class raph(cmdhandler):
+    def callback(self, update, context):
+        self.handler.message(update, context, raph=True)

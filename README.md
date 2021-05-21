@@ -10,6 +10,9 @@ This is the source code for using a Telegram bot with a thermal printer
 - emoji
 - ujson
 - pytz
+- random
+- os
+- requests
 
 
 ## Features
