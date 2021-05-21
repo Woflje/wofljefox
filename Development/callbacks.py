@@ -9,6 +9,7 @@ from emoji import demojize
 import requests
 import random
 import pytz
+import os
 
 from text import *
 
@@ -52,6 +53,7 @@ class printer:
                     # Print image if image exists
                     if item['image']:
                         self.p.image(item['image'])
+                        os.remove(item['image'])
                         
 
                     # Cut if auto_cut is enabled
