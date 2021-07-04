@@ -2,19 +2,9 @@
 This is the source code for using a Telegram bot with a thermal printer
 
 ### Installation:
-- python-telegram-bot
-- escpos
-- tinydb
-- datetime
-- Pillow
-- emoji
-- ujson
-- pytz
-- random
-- os
-- requests
+Install requirements from `requirements.txt`
 
-Add a config.json next to main.py and include:
+Add a `config.json` next to `main.py` and include:
 ```
 { "token": "<telegram bot token>",
   "admin_id":  <telegram admin id>,
@@ -36,6 +26,7 @@ Add a config.json next to main.py and include:
 - Extracts URLs from text, and prints them as QR codes
 - Prints images in portrait layout, unless they'd be super long, then it just prints them landscape
 - Print license support, including grant/revoke rights for owner
+- Prints Trello lists and its cards and checklists
 
 ## To Do
 
