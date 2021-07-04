@@ -1,7 +1,7 @@
 # wofljefox
 This is the source code for using a Telegram bot with a thermal printer
 
-### Required packages:
+### Installation:
 - python-telegram-bot
 - escpos
 - tinydb
@@ -14,6 +14,21 @@ This is the source code for using a Telegram bot with a thermal printer
 - os
 - requests
 
+Add a config.json next to main.py and include:
+```
+{ "token": "<telegram bot token>",
+  "admin_id":  <telegram admin id>,
+  "port": "/dev/ttyUSB0",
+  "baud": 38400,
+  "auto_cut": true,
+  "max_width": 512,
+  "timezone": "Europe/Amsterdam",
+  "url_start_tags": ["https://", "http:/"],
+  "url_end_tags": [" ", ". ", "\n", ", ", "https://", "http:/"],
+  "trello_api_key": "<trello_api_key>",
+  "trello_api_secret": "<trello_api_secret>",
+  "trello_token": "<trello_token>"}
+```
 
 ## Features
 
