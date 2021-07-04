@@ -1,0 +1,12 @@
+python-telegram-bot
+escpos
+tinydb
+datetime
+Pillow
+emoji
+ujson
+pytz
+random
+os
+requests
+py-trello
