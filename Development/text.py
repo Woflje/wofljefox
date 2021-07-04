@@ -28,3 +28,11 @@ no_print_access = (
 raph_text = (
 	'''Sending Raphtalia...'''
 )
+
+trello_text = (
+	'''Sending Tasks...'''
+)
+
+trello_usage = (
+	'''Usage: /trello <board>, <list>'''
+)

@@ -1,6 +1,7 @@
 from escpos.printer import Serial
 from tinydb import Query
 from datetime import datetime
+from trello import TrelloClient
 import tinydb.operations as tdbop
 from escpos import *
 from PIL import Image
@@ -36,8 +37,12 @@ class printer:
                 if item['text'] or item['urls'] or item['image']:
                     if item['level'] < 2:
                         self.p.text(f"Name: {item['name']}\nID:   {item['id']}\nDate: {item['date'].split('+')[0]}\n\n")
+                    else:
+                    	self.p.text(f"Date: {item['date'].split('+')[0]}\n\n")
                     if item['raph'] == True:
                         context.bot.send_message(chat_id=item['id'], text=raph_text)
+                    elif item['trello'] == True:
+                        context.bot.send_message(chat_id=item['id'], text=trello_text)
                     else:
                         context.bot.send_message(chat_id=item['id'], text=printing_text)
                     # Print text if text exists
@@ -101,7 +106,7 @@ class handler:
             level = -1
         return level
 
-    def message(self, update, context, raph=False):
+    def message(self, update, context, raph=False, trello=False):
         message = update.message
         date = message.date
         level = self.get_level(message.chat.id)
@@ -115,6 +120,63 @@ class handler:
             imageFile = None
             urls = []
             self.users.update(tdbop.increment("messages"), Query().id == message.chat.id)
+
+            if trello:
+                client = TrelloClient(
+                api_key=self.cf["trello_api_key"],
+                api_secret=self.cf["trello_api_secret"],
+                token=self.cf["trello_token"]
+                )
+                trello_input=text.split(" ",1)
+                if len(trello_input)<2:
+                	message.reply_text(trello_usage)
+                	text=None
+                else:
+                	trello_args=trello_input[1].split(",")
+                	if len(trello_args)<2:
+                		message.reply_text(trello_usage)
+                		text=None
+                	else:
+                		if trello_args[1][0]==" ":
+                			trello_args_list=trello_args[1].split(" ",1)[1]
+	                	else:
+	                		trello_args_list=trello_args[1]
+	                	trello_args_board=trello_args[0]
+
+	                	trello_board=None
+	                	for board in client.list_boards():
+	                		if board.name == trello_args_board:
+	                			trello_board=board
+	                	if trello_board is None:
+	                		message.reply_text("Trello board '"+trello_args_board+"' not found!")
+	                		text=None
+	                	else:
+	                		trello_board_list=None
+	                		for board_list in trello_board.list_lists():
+	                			if board_list.name == trello_args_list:
+	                				trello_board_list=board_list
+	                		if trello_board_list is None:
+	                			message.reply_text("Trello list'"+trello_args_list+"' not found in board '"+trello_args_board+"'!")
+	                			text=None
+	                		else:
+	                			text="-{"+trello_board.name+"}-\n"+"["+trello_board_list.name+"]\n"
+	                			for board_list_card in trello_board_list.list_cards():
+	                				text+=" "+board_list_card.name+"\n"
+	                				card_desc=board_list_card.desc
+	                				if len(card_desc)>0:
+	                					text+="  '"+card_desc+"'\n"
+	                				card_checklists=board_list_card.fetch_checklists()
+	                				if len(card_checklists)>0:
+	                					for checklist in card_checklists:
+	                						text+="  {"+checklist.name+"}\n"
+	                						checklist_items=checklist.items
+	                						if len(checklist_items)>0:
+	                							for checklist_item in checklist_items:
+	                								if checklist_item.get('checked'):
+	                									text+="   [X] "
+	                								else:
+	                									text+="   [ ] "
+	                								text+=checklist_item.get('name')+"\n"
 
             if raph:
                 text = None
@@ -177,9 +239,11 @@ class handler:
                 if raph == True:
                     new_raph = "." + image.split('.')[-2] + ".jpeg"
                     img.save(new_raph, 'JPEG')
+                    os.remove(image)
                     image = new_raph
                 else:
                     img.save(f"./imgcache/{imageFile.file_unique_id}.jpeg", 'JPEG')
+                    os.remove(image)
                     image = f"./imgcache/{imageFile.file_unique_id}.jpeg"
 
                 
@@ -196,6 +260,7 @@ class handler:
                                "text": text,
                                "image": image,
                                "raph": raph,
+                               "trello": trello,
                                "urls": urls,
                                "printed": False})
             if self.sleep:

@@ -101,3 +101,7 @@ class wake(cmdhandler):
 class raph(cmdhandler):
     def callback(self, update, context):
         self.handler.message(update, context, raph=True)
+
+class trello_send(cmdhandler):
+    def callback(self, update, context):
+        self.handler.message(update, context, trello_send=True)
