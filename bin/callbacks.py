@@ -213,6 +213,8 @@ class handler:
             elif message.sticker is not None:
                 if message.sticker.is_animated:
                     message.reply_text("Sorry, I can't print animated stickers at the moment :c")
+                    context.bot.get_file(message.sticker.file_id).download(custom_path=f"./imgcache/{imageFile.file_id}.{imageFile.file_path.split('.')[-1]}")
+
                 else:
                     imageFile = context.bot.get_file(message.sticker.file_id)
 
