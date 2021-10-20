@@ -5,3 +5,4 @@ __pycache__/
 venv/
 config.json
 printerdb.json
+raph_db/

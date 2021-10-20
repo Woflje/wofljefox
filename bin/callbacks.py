@@ -7,17 +7,11 @@ from escpos import *
 from PIL import Image
 from time import sleep
 from emoji import demojize
-import requests
 import random
 import pytz
 import os
 
 from text import *
-
-
-def raph_exists(raph_db, raph_n, ext):
-    raph_img_path = raph_db + "/img/raph/" + raph_n + ext
-    return requests.head(raph_img_path).status_code == requests.codes.ok
 
 class printer:
     def __init__(self, config, queue, db):
@@ -58,8 +52,7 @@ class printer:
                     # Print image if image exists
                     if item['image']:
                         self.p.image(item['image'])
-                        os.remove(item['image'])
-                        
+                        os.remove(item['image'])    
 
                     # Cut if auto_cut is enabled
                     if self.cf['auto_cut']:
@@ -68,9 +61,9 @@ class printer:
                     # Update queue
                     self.queue.update(tdbop.set("printed", True), Query().date == item['date'])
 
-                    # If an image was printed, give the printer two seconds to cool down
+                    sleep(1)
                     if item['image']:
-                        sleep(2)
+                        sleep(3)
 
         # After queue is empty, remove queue
         self.db.drop_table('queue')
@@ -180,21 +173,9 @@ class handler:
 
             if raph:
                 text = None
-                raph_db = "https://thelegendofwolf.com"
-                raph_db_path = raph_db + "/img/raph/"
-                raph_n = str(random.randrange(0,143))
-                if raph_exists(raph_db, raph_n, ".jpg") == True:
-                    imageFile = raph_db_path + raph_n + ".jpg"
-                elif raph_exists(raph_db, raph_n, ".jpeg") == True:
-                    imageFile = raph_db_path + raph_n + ".jpeg"
-                elif raph_exists(raph_db, raph_n, ".png") == True:
-                    imageFile = raph_db_path + raph_n + ".png"
-                elif raph_exists(raph_db, "0", ".jpg") == True:
-                    imageFile = raph_db_path + "0.jpg"
-                    raph_n = "0"
-                else:
-                    raph = False
-                    message.reply_text("Failed to load the Raphtalia database! Cannot send Raphtalia... please wait for season 2.")
+                raph_n = str(random.randrange(0,31))
+                imageFile = "./raph_db/" + raph_n + ".png"
+                image = imageFile
             elif text is not None:
                 text = demojize(text)
                 newchars = self.users.search(Query().id == message.chat.id)[0]['characters'] + len(text)
@@ -206,30 +187,35 @@ class handler:
 
     # IMAGE check + processing
             # DOCUMENT check
+            animated_sticker = False
             if message.document is not None:
                 imageFile = context.bot.get_file(message.document.file_id)
 
             # STICKER check
             elif message.sticker is not None:
                 if message.sticker.is_animated:
-                    message.reply_text("Sorry, I can't print animated stickers at the moment :c")
-                    context.bot.get_file(message.sticker.file_id).download(custom_path=f"./imgcache/{imageFile.file_id}.{imageFile.file_path.split('.')[-1]}")
-
+                    animated_sticker = True
+                    message.reply_text("Processing animated sticker...")
                 else:
-                    imageFile = context.bot.get_file(message.sticker.file_id)
+                    message.reply_text("Processing sticker...")
+                imageFile = context.bot.get_file(message.sticker.file_id)
 
             # PHOTO check
             elif message.photo:
+                message.reply_text("Processing image...")
                 imageFile = context.bot.get_file(message.photo[-1].file_id)
 
             # Only process and add image if an image exists
             if imageFile is not None:
                 self.users.update(tdbop.increment("images"), Query().id == message.chat.id)
-                if raph == True:
-                    image = "./imgcache/raph_" + imageFile.split('/')[-1]
-                    open(image, 'wb').write(requests.get(imageFile, allow_redirects=True).content)
-                else:
+                if not raph:
                     image = imageFile.download(custom_path=f"./imgcache/{imageFile.file_id}.{imageFile.file_path.split('.')[-1]}")
+                if animated_sticker:
+                    lottie_dir = '/home/'+os.getcwd().split('/')[2]+'/.local/bin/'
+                    output = 'imgcache/'+image.split('.')[-1]+'.png'
+                    os.system(lottie_dir+'lottie_convert.py '+image+' '+output+' --frame 1')
+                    os.remove(image)
+                    image = output
                 img = Image.open(image)
                 img = img.convert('RGBA')
                 tempimg = Image.new('RGBA', img.size, "WHITE")
@@ -238,7 +224,7 @@ class handler:
                 if img.size[0] > img.size[1] and img.size[0] < 3 * img.size[1] or img.size[1] > 3 * img.size[0]:
                     img = img.rotate(angle=90, expand=True)
                 img = img.resize((self.cf['max_width'], int(img.size[1] * self.cf['max_width']/img.size[0])))
-                if raph == True:
+                if raph:
                     new_raph = "." + image.split('.')[-2] + ".jpeg"
                     img.save(new_raph, 'JPEG')
                     os.remove(image)
